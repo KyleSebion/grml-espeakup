@@ -1,16 +1,16 @@
 #!/bin/bash -e
 # .iso files that have been tested:
-ISO=grml64-full_2024.02.iso      # wget https://download.grml.org/grml64-full_2024.02.iso
-ISO=grml64-small_2024.02.iso     # wget https://download.grml.org/grml64-small_2024.02.iso
-ISO=grml-full-2024.12-amd64.iso  # wget https://download.grml.org/grml-full-2024.12-amd64.iso
-ISO=grml-small-2024.12-amd64.iso # wget https://download.grml.org/grml-small-2024.12-amd64.iso
+iso=grml64-full_2024.02.iso      # wget https://download.grml.org/grml64-full_2024.02.iso
+iso=grml64-small_2024.02.iso     # wget https://download.grml.org/grml64-small_2024.02.iso
+iso=grml-full-2024.12-amd64.iso  # wget https://download.grml.org/grml-full-2024.12-amd64.iso
+iso=grml-small-2024.12-amd64.iso # wget https://download.grml.org/grml-small-2024.12-amd64.iso
 
 test -n "$1" && ISO=$1
-if test ! -r "$ISO"; then echo "'$ISO' is not readable or doesn't exist"; exit 1; fi
+if test ! -r "$iso"; then echo "'$iso' is not readable or doesn't exist"; exit 1; fi
 
 apt -y install xorriso arch-install-scripts squashfs-tools
 
-xorriso -osirrox on -indev "$ISO" -extract / isofiles
+xorriso -osirrox on -indev "$iso" -extract / isofiles
 test -n "$grml2espeak_test" && sed -i -re '/linux/s/$/ssh=live console=ttyS0/' -e '1i\set timeout=1' isofiles/boot/grub/grml*_default.cfg
 
 mkdir isofiles/scripts
@@ -50,7 +50,7 @@ cp -a sqfs/var/cache/apt/. isofiles/scripts/apt_cache
 cp -a sqfs/var/\lib\/apt/. isofiles/scripts/apt_state
 umount sqfs
 
-head -c 432 "$ISO" > isohdpfx.bin
+head -c 432 "$iso" > isohdpfx.bin
 xorriso -as mkisofs -V GRMLCFG -publisher 'grml-live | grml.org' -l -r -J -no-emul-boot -boot-load-size 4 \
   -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
   -boot-info-table -eltorito-alt-boot -e boot/efi.img -no-emul-boot -isohybrid-mbr isohdpfx.bin \
