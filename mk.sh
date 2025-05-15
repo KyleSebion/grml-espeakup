@@ -11,7 +11,7 @@ if test ! -r "$iso"; then echo "'$iso' is not readable or doesn't exist"; exit 1
 apt -y install xorriso arch-install-scripts squashfs-tools
 
 xorriso -osirrox on -indev "$iso" -extract / isofiles
-test -n "$grml2espeak_test" && sed -i -re '/linux/s/$/ssh=live console=ttyS0/' -e '1i\set timeout=1' isofiles/boot/grub/grml*_default.cfg
+test -n "$grml_espeakup_test" && sed -i -re '/linux/s/$/ssh=live console=ttyS0/' -e '1i\set timeout=1' isofiles/boot/grub/grml*_default.cfg
 
 mkdir isofiles/scripts
 cat << 'EOF' > isofiles/scripts/grml.sh
