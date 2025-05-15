@@ -1,2 +1,2 @@
 #!/bin/bash
-for f in *.iso; do ./mk.sh $f; mv espeakup.iso espeakup.$f; done
+for f in *.iso; do for t in espeakup ltlk; do ./mk.sh "$f" "$t"; mv espeakup.iso "$t.$f"; done; done

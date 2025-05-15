@@ -5,50 +5,56 @@ iso=grml64-small_2024.02.iso     # wget https://download.grml.org/grml64-small_2
 iso=grml-full-2024.12-amd64.iso  # wget https://download.grml.org/grml-full-2024.12-amd64.iso
 iso=grml-small-2024.12-amd64.iso # wget https://download.grml.org/grml-small-2024.12-amd64.iso
 
-test -n "$1" && ISO=$1
+test -n "$1" && iso=$1
 if test ! -r "$iso"; then echo "'$iso' is not readable or doesn't exist"; exit 1; fi
-
-apt -y install xorriso arch-install-scripts squashfs-tools
-
-xorriso -osirrox on -indev "$iso" -extract / isofiles
-test -n "$grml_espeakup_test" && sed -i -re '/linux/s/$/ssh=live console=ttyS0/' -e '1i\set timeout=1' isofiles/boot/grub/grml*_default.cfg
-
-mkdir isofiles/scripts
-cat << 'EOF' > isofiles/scripts/grml.sh
-#!/bin/bash
-
-case $(dmidecode -t 1) in
-  *'IdeaPad Gaming 3 15ACH6'*);&
-  *'some other model xxxxxx'*)
-    printf 'defaults.%s.card 1\n' pcm ctl > /etc/asound.conf
-  ;;
+case "$2" in
+  ltlk) synth_type=ltlk;;
+  *)    synth_type=espeakup;;
 esac
 
-if grep -Pq 'grml-(small|full)-amd64 2024.12' /etc/issue; then
-  cat << '  SND' | sed -re 's/^ +//' > /etc/modprobe.d/snd-hd-intel.conf
-    options snd-hda-intel single_cmd=1
-    options snd-hda-intel probe_mask=1
-    options snd-hda-intel model=basic
-  SND
-  modprobe -r snd_hda_intel
-  modprobe    snd_hda_intel
-fi
-
-self_dir=$(dirname "$0")
-cp -a "$self_dir/apt_cache/." /var/cache/apt
-cp -a "$self_dir/apt_state/." /var/\lib\/apt
-apt-get install -y espeakup alsa-utils
-systemctl enable --now espeakup
-systemd-run -u deferred --no-block -p After=grml-boot.target bash -c 'amixer set Master 100% unmute; amixer set Speaker 100% unmute'
-EOF
-chmod +x isofiles/scripts/grml.sh
-
+apt -y install xorriso arch-install-scripts squashfs-tools
+xorriso -osirrox on -indev "$iso" -extract / isofiles
 unsquashfs -d sqfs isofiles/live/grml*/grml*.squashfs
-mount -B sqfs sqfs
-arch-chroot sqfs /bin/bash -c 'apt-get update; apt-get install -yd espeakup alsa-utils'
-cp -a sqfs/var/cache/apt/. isofiles/scripts/apt_cache
-cp -a sqfs/var/\lib\/apt/. isofiles/scripts/apt_state
-umount sqfs
+mount -B sqfs sqfs # to appease arch-chroot
+
+test -n "$grml_espeakup_test" && sed -i -re '/boot=live/s/$/ ssh=live ip=10.10.10.2::10.10.10.1:255.255.255.0::::1.1.1.1:8.8.8.8: /' -e '1i\set timeout=1' isofiles/boot/grub/grml*_default.cfg
+
+mkdir isofiles/scripts
+echo '#!/bin/bash' > isofiles/scripts/grml.sh
+chmod +x isofiles/scripts/grml.sh
+if test "$synth_type" = espeakup; then
+  cat << '  EOF' | sed -re 's/^    //' >> isofiles/scripts/grml.sh
+    case $(dmidecode -t 1) in
+      *'IdeaPad Gaming 3 15ACH6'*);&
+      *'some other model xxxxxx'*)
+        printf 'defaults.%s.card 1\n' pcm ctl > /etc/asound.conf
+      ;;
+    esac
+    if grep -Pq 'grml-(small|full)-amd64 2024.12' /etc/issue; then
+      cat << '  SND' | sed -re 's/^    //' > /etc/modprobe.d/snd-hd-intel.conf
+        options snd-hda-intel single_cmd=1
+        options snd-hda-intel probe_mask=1
+        options snd-hda-intel model=basic
+      SND
+      modprobe -r snd_hda_intel
+      modprobe    snd_hda_intel
+    fi
+    self_dir=$(dirname "$0")
+    cp -a "$self_dir/apt_cache/." /var/cache/apt
+    cp -a "$self_dir/apt_state/." /var/\lib\/apt
+    apt-get install -y espeakup alsa-utils
+    systemctl enable --now espeakup
+    systemd-run -u deferred --no-block -p After=grml-boot.target bash -c 'amixer set Master 100% unmute; amixer set Speaker 100% unmute'
+  EOF
+  arch-chroot sqfs /bin/bash -c 'apt-get update; apt-get install -yd espeakup alsa-utils'
+  cp -a sqfs/var/cache/apt/. isofiles/scripts/apt_cache
+  cp -a sqfs/var/\lib\/apt/. isofiles/scripts/apt_state
+fi
+if test "$synth_type" = ltlk; then
+  arch-chroot sqfs /bin/bash -c 'echo speakup_ltlk >> /etc/initramfs-tools/modules; update-initramfs -u -k all'
+  cp sqfs/boot/initrd.img* isofiles/boot/grml*/initrd.img
+  #maybe unneeded: sed -i -re '/boot=live/s/$/ speakup_ltlk.start=1 /' isofiles/boot/grub/*.cfg isofiles/boot/isolinux/*.cfg
+fi
 
 head -c 432 "$iso" > isohdpfx.bin
 xorriso -as mkisofs -V GRMLCFG -publisher 'grml-live | grml.org' -l -r -J -no-emul-boot -boot-load-size 4 \
@@ -56,4 +62,5 @@ xorriso -as mkisofs -V GRMLCFG -publisher 'grml-live | grml.org' -l -r -J -no-em
   -boot-info-table -eltorito-alt-boot -e boot/efi.img -no-emul-boot -isohybrid-mbr isohdpfx.bin \
   -eltorito-alt-boot -e boot/efi.img -no-emul-boot -isohybrid-gpt-basdat -no-pad -o espeakup.iso isofiles
 
-rm -r isohdpfx.bin sqfs isofiles &> /dev/null
+umount sqfs
+rm -r isohdpfx.bin sqfs isofiles
