@@ -4,6 +4,8 @@ iso=grml64-full_2024.02.iso      # wget https://download.grml.org/grml64-full_20
 iso=grml64-small_2024.02.iso     # wget https://download.grml.org/grml64-small_2024.02.iso
 iso=grml-full-2024.12-amd64.iso  # wget https://download.grml.org/grml-full-2024.12-amd64.iso
 iso=grml-small-2024.12-amd64.iso # wget https://download.grml.org/grml-small-2024.12-amd64.iso
+iso=grml-full-2025.05-amd64.iso  # wget https://download.grml.org/grml-full-2025.05-amd64.iso
+iso=grml-small-2025.05-amd64.iso # wget https://download.grml.org/grml-small-2025.05-amd64.iso
 
 # handle arguments
 test -n "$1" && iso=$1
