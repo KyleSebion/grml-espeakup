@@ -77,7 +77,7 @@ fi
 
 head -c 432 "$iso" > isohdpfx.bin # extract isohdpfx.bin to use in new .iso; based on https://wiki.debian.org/RepackBootableISO
 
-# create new .iso
+# create new .iso; based on "mkisofs_cmdline" in isofiles\conf\buildinfo.json
 xorriso -as mkisofs -V GRMLCFG -publisher 'grml-live | grml.org' -l -r -J -no-emul-boot -boot-load-size 4 \
   -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
   -boot-info-table -eltorito-alt-boot -e boot/efi.img -no-emul-boot -isohybrid-mbr isohdpfx.bin \
